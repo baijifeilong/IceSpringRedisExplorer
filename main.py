@@ -1,5 +1,4 @@
 # Created by BaiJiFeiLong@gmail.com at 2021/12/20 10:56
-
 import logging
 
 import colorlog
@@ -10,7 +9,10 @@ from PySide2 import QtWidgets, QtGui, QtCore
 def onDoubleClicked(index: QtCore.QModelIndex):
     key = keys[index.row()]
     value = rds.get(key)
-    detailLabel.setText(value.decode())
+    ttl = rds.ttl(key)
+    infoEdit.setText(f"TTL: {ttl}")
+    keyEdit.setText(key.decode())
+    valueEdit.setText(value.decode())
 
 
 consoleLogPattern = "%(log_color)s%(asctime)s %(levelname)8s %(name)-10s %(message)s"
@@ -27,11 +29,22 @@ mainSplitter = QtWidgets.QSplitter(mainWindow)
 treeView = QtWidgets.QTreeView(mainSplitter)
 treeView.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 treeView.doubleClicked.connect(onDoubleClicked)
-detailLabel = QtWidgets.QLabel("Label", mainSplitter)
+detailSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical, mainSplitter)
 mainSplitter.addWidget(treeView)
-mainSplitter.addWidget(detailLabel)
-mainSplitter.setSizes([1, 1])
+mainSplitter.addWidget(detailSplitter)
+mainSplitter.setStretchFactor(0, 1)
+mainSplitter.setStretchFactor(1, 1)
 mainWindow.setCentralWidget(mainSplitter)
+
+infoEdit = QtWidgets.QTextEdit("Info", detailSplitter)
+keyEdit = QtWidgets.QTextEdit("Key", detailSplitter)
+valueEdit = QtWidgets.QTextEdit("Value", detailSplitter)
+detailSplitter.addWidget(infoEdit)
+detailSplitter.addWidget(keyEdit)
+detailSplitter.addWidget(valueEdit)
+detailSplitter.setStretchFactor(0, 1)
+detailSplitter.setStretchFactor(1, 1)
+detailSplitter.setStretchFactor(2, 2)
 
 treeModel = QtGui.QStandardItemModel(treeView)
 treeModel.setHorizontalHeaderLabels(["Key"])

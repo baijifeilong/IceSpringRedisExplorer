@@ -2,3 +2,7 @@ pyinstaller==4.7
 PySide2==5.15.2
 QtAwesome==1.1.1
 colorlog==6.6.0
+redis==4.0.2
+mimesis==4.1.3
+
+
