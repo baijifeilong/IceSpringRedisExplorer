@@ -12,30 +12,43 @@ def onDoubleClicked(index: QtCore.QModelIndex):
     value = rds.get(key)
     ttl = rds.ttl(key)
     infoEdit.setText(f"TTL: {ttl}")
-    keyEdit.setText(key.decode())
-    valueEdit.setProperty("raw", value)
-    valueEdit.setText(value.decode())
+    infoEdit.setProperty("key", key)
+    infoEdit.setProperty("value", value)
+    onRefreshValue()
+
+
+def detectType(text: str) -> str:
+    if text.startswith("{") or text.startswith("["):
+        return "JSON"
+    return "Raw"
 
 
 def onRefreshValue():
-    raw = valueEdit.property("raw")
+    key = infoEdit.property("key")
+    value = infoEdit.property("value")
     type = valueRadioGroup.checkedButton().text()
-    text = json.dumps(json.loads(raw), indent=4, ensure_ascii=False) if type == "JSON" else raw.decode()
+    type = type if type != "Auto" else detectType(value.decode())
+    text = json.dumps(json.loads(value), indent=4, ensure_ascii=False) if type == "JSON" else value.decode()
+    keyEdit.setText(key.decode())
     valueEdit.setText(text)
 
 
-consoleLogPattern = "%(log_color)s%(asctime)s %(levelname)8s %(name)-10s %(message)s"
+pattern = "%(log_color)s%(asctime)s %(levelname)8s %(name)-10s %(message)s"
 logging.getLogger().handlers = [logging.StreamHandler()]
-logging.getLogger().handlers[0].setFormatter(colorlog.ColoredFormatter(consoleLogPattern))
+logging.getLogger().handlers[0].setFormatter(colorlog.ColoredFormatter(pattern))
 logging.getLogger().setLevel(logging.DEBUG)
 
 app = QtWidgets.QApplication()
+font = app.font()
+font.setPointSize(12)
+app.setFont(font)
 mainWindow = QtWidgets.QMainWindow()
 mainWindow.statusBar().showMessage("Ready.")
-mainWindow.resize(800, 600)
+mainWindow.resize(1280, 720)
 
 mainSplitter = QtWidgets.QSplitter(mainWindow)
 treeView = QtWidgets.QTreeView(mainSplitter)
+treeView.setAlternatingRowColors(True)
 treeView.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 treeView.doubleClicked.connect(onDoubleClicked)
 detailSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical, mainSplitter)
@@ -82,6 +95,7 @@ rds = redis.Redis()
 keys = rds.keys()
 for key in keys:
     treeModel.invisibleRootItem().appendRow(QtGui.QStandardItem(key.decode()))
+treeView.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
 mainWindow.show()
 app.exec_()

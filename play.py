@@ -9,6 +9,8 @@ generic = mimesis.Generic(seed=0)
 rds = redis.Redis()
 
 personMime = mimesis.Person(seed=0)
+foodMime = mimesis.Food(seed=0)
+
 for index in range(10):
     person = dict(
         fullname=personMime.full_name(),
@@ -18,6 +20,9 @@ for index in range(10):
         weight=personMime.weight()
     )
     rds.set(f"PERSONS:{index + 1}", json.dumps(person))
+
+for index in range(10):
+    rds.set(f"DISHES:{index + 1}", foodMime.dish())
 
 for key in rds.keys():
     print(key, rds.get(key))
