@@ -8,7 +8,9 @@ from PySide2 import QtWidgets, QtGui, QtCore
 
 
 def refreshNode(index: QtCore.QModelIndex):
-    key = index.data().encode()
+    key = index.data(QtCore.Qt.UserRole)
+    if not rds.exists(key):
+        return
     value = rds.get(key)
     ttl = rds.ttl(key)
     infoEdit.setText(f"TTL: {ttl}")
@@ -50,7 +52,7 @@ mainSplitter = QtWidgets.QSplitter(mainWindow)
 treeView = QtWidgets.QTreeView(mainSplitter)
 treeView.setAlternatingRowColors(True)
 treeView.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
-treeView.doubleClicked.connect(refreshNode)
+treeView.clicked.connect(refreshNode)
 detailSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical, mainSplitter)
 mainSplitter.addWidget(treeView)
 mainSplitter.addWidget(detailSplitter)
@@ -91,10 +93,27 @@ treeModel = QtGui.QStandardItemModel(treeView)
 treeModel.setHorizontalHeaderLabels(["Key"])
 treeView.setModel(treeModel)
 
+
+def processNode(viewNode, dataNode, path=""):
+    for k, v in dataNode.items():
+        childPath = f"{path}:{k}".lstrip(":")
+        node = QtGui.QStandardItem(k)
+        node.setData(childPath.encode(), QtCore.Qt.UserRole)
+        viewNode.appendRow(node)
+        processNode(node, v, childPath)
+
+
 rds = redis.Redis()
-keys = rds.keys()
-for key in keys:
-    treeModel.invisibleRootItem().appendRow(QtGui.QStandardItem(key.decode()))
+tree = dict()
+keys = list(map(bytes.decode, rds.keys()))
+for key in map(bytes.decode, rds.keys()):
+    dkt = tree
+    for part in key.split(":"):
+        dkt[part] = dkt[part] if part in dkt else dict()
+        dkt = dkt[part]
+viewNode = treeModel.invisibleRootItem()
+dataNode = tree
+processNode(viewNode, dataNode)
 treeView.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
 mainWindow.show()

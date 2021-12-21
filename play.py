@@ -43,5 +43,11 @@ for index in range(10):
     rds.set(f"FOODS:FRUITS:{index + 1}", foodMime.fruit())
     rds.set(f"FOODS:VEGETABLES:{index + 1}", foodMime.vegetable())
 
-for key in sorted(rds.keys()):
-    print(key, rds.get(key))
+tree = dict()
+for key in map(bytes.decode, rds.keys()):
+    dkt = tree
+    for part in key.split(":"):
+        dkt[part] = dkt[part] if part in dkt else dict()
+        dkt = dkt[part]
+print(tree)
+print(json.dumps(tree, indent=4))
