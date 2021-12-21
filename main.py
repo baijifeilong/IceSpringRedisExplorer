@@ -7,14 +7,14 @@ import redis
 from PySide2 import QtWidgets, QtGui, QtCore
 
 
-def onDoubleClicked(index: QtCore.QModelIndex):
-    key = keys[index.row()]
+def refreshNode(index: QtCore.QModelIndex):
+    key = index.data().encode()
     value = rds.get(key)
     ttl = rds.ttl(key)
     infoEdit.setText(f"TTL: {ttl}")
     infoEdit.setProperty("key", key)
     infoEdit.setProperty("value", value)
-    onRefreshValue()
+    refreshValue()
 
 
 def detectType(text: str) -> str:
@@ -23,7 +23,7 @@ def detectType(text: str) -> str:
     return "Raw"
 
 
-def onRefreshValue():
+def refreshValue():
     key = infoEdit.property("key")
     value = infoEdit.property("value")
     type = valueRadioGroup.checkedButton().text()
@@ -50,7 +50,7 @@ mainSplitter = QtWidgets.QSplitter(mainWindow)
 treeView = QtWidgets.QTreeView(mainSplitter)
 treeView.setAlternatingRowColors(True)
 treeView.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
-treeView.doubleClicked.connect(onDoubleClicked)
+treeView.doubleClicked.connect(refreshNode)
 detailSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical, mainSplitter)
 mainSplitter.addWidget(treeView)
 mainSplitter.addWidget(detailSplitter)
@@ -81,7 +81,7 @@ valueAutoRadio.setChecked(True)
 valueRawRadio = QtWidgets.QRadioButton("Raw", valueWidget)
 valueJsonRadio = QtWidgets.QRadioButton("JSON", valueWidget)
 valueRadioGroup = QtWidgets.QButtonGroup(valueLayout)
-valueRadioGroup.buttonClicked.connect(onRefreshValue)
+valueRadioGroup.buttonClicked.connect(refreshValue)
 for radio in valueAutoRadio, valueRawRadio, valueJsonRadio:
     valueRadioLayout.addWidget(radio)
     valueRadioGroup.addButton(radio)
