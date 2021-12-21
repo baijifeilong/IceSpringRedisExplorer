@@ -36,7 +36,7 @@ for index in range(10):
     )
     rds.set(f"PERSONS:{index + 1}", json.dumps(person))
     rds.set(f"PERSONS:{index + 1}:ADDRESS", json.dumps(address))
-    rds.set(f"PERSONS:{index + 1}:COMPUTER", json.dumps(computer))
+    rds.set(f"PERSONS:{index + 1}:COMPUTER", json.dumps(json.dumps(computer)))
 
 for index in range(10):
     rds.set(f"FOODS:DISHES:{index + 1}", foodMime.dish())

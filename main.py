@@ -20,9 +20,16 @@ def refreshNode(index: QtCore.QModelIndex):
 
 
 def detectType(text: str) -> str:
-    if text.startswith("{") or text.startswith("["):
+    if text[:1] in '{["':
         return "JSON"
     return "Raw"
+
+
+def loadJson(text: str):
+    try:
+        return json.loads(json.loads(text))
+    except TypeError:
+        return json.loads(text)
 
 
 def refreshValue():
@@ -30,7 +37,7 @@ def refreshValue():
     value = infoEdit.property("value")
     type = valueRadioGroup.checkedButton().text()
     type = type if type != "Auto" else detectType(value.decode())
-    text = json.dumps(json.loads(value), indent=4, ensure_ascii=False) if type == "JSON" else value.decode()
+    text = json.dumps(loadJson(value), indent=4, ensure_ascii=False) if type == "JSON" else value.decode()
     keyEdit.setText(key.decode())
     valueEdit.setText(text)
 
