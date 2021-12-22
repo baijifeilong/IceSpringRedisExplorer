@@ -8,7 +8,10 @@ from PySide2 import QtWidgets, QtGui, QtCore
 
 
 def refreshNode(index: QtCore.QModelIndex):
-    key = index.data(QtCore.Qt.UserRole)
+    jd = index.data(QtCore.Qt.UserRole)
+    if jd["type"] != "KEY":
+        return
+    key = jd["path"]
     if not rds.exists(key):
         return
     value = rds.get(key)
@@ -48,24 +51,31 @@ logging.getLogger().handlers[0].setFormatter(colorlog.ColoredFormatter(pattern))
 logging.getLogger().setLevel(logging.DEBUG)
 
 app = QtWidgets.QApplication()
+app.setApplicationName("Ice Spring Redis Explorer")
 font = app.font()
 font.setPointSize(12)
 app.setFont(font)
 mainWindow = QtWidgets.QMainWindow()
 mainWindow.statusBar().showMessage("Ready.")
 mainWindow.resize(1280, 720)
+mainWindow.show()
 
 mainSplitter = QtWidgets.QSplitter(mainWindow)
 treeView = QtWidgets.QTreeView(mainSplitter)
 treeView.setAlternatingRowColors(True)
 treeView.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 treeView.clicked.connect(refreshNode)
+treeView.doubleClicked.connect(lambda *args: onDoubleClicked(*args))
 detailSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical, mainSplitter)
 mainSplitter.addWidget(treeView)
 mainSplitter.addWidget(detailSplitter)
 mainSplitter.setStretchFactor(0, 1)
 mainSplitter.setStretchFactor(1, 1)
 mainWindow.setCentralWidget(mainSplitter)
+
+treeModel = QtGui.QStandardItemModel(treeView)
+treeModel.setHorizontalHeaderLabels(["Key"])
+treeView.setModel(treeModel)
 
 infoEdit = QtWidgets.QTextEdit("Info", detailSplitter)
 keyEdit = QtWidgets.QTextEdit("Key", detailSplitter)
@@ -96,32 +106,46 @@ for radio in valueAutoRadio, valueRawRadio, valueJsonRadio:
     valueRadioGroup.addButton(radio)
 valueRadioLayout.addStretch()
 
-treeModel = QtGui.QStandardItemModel(treeView)
-treeModel.setHorizontalHeaderLabels(["Key"])
-treeView.setModel(treeModel)
-
-
-def processNode(viewNode, dataNode, path=""):
-    for k, v in dataNode.items():
-        childPath = f"{path}:{k}".lstrip(":")
-        node = QtGui.QStandardItem(k)
-        node.setData(childPath.encode(), QtCore.Qt.UserRole)
-        viewNode.appendRow(node)
-        processNode(node, v, childPath)
-
-
 rds = redis.Redis()
-tree = dict()
-keys = list(map(bytes.decode, rds.keys()))
-for key in map(bytes.decode, rds.keys()):
-    dkt = tree
-    for part in key.split(":"):
-        dkt[part] = dkt[part] if part in dkt else dict()
-        dkt = dkt[part]
-viewNode = treeModel.invisibleRootItem()
-dataNode = tree
-processNode(viewNode, dataNode)
-treeView.sortByColumn(0, QtCore.Qt.AscendingOrder)
+sources = ["Alpha", "Beta", "Gamma"]
+for source in sources:
+    sourceNode = QtGui.QStandardItem(source)
+    sourceNode.setData(dict(type="SOURCE"), QtCore.Qt.UserRole)
+    treeModel.invisibleRootItem().appendRow(sourceNode)
 
-mainWindow.show()
+
+def onDoubleClicked(modelIndex: QtCore.QModelIndex):
+    clickedNode = treeModel.itemFromIndex(modelIndex)
+    jd = clickedNode.data(QtCore.Qt.UserRole)
+    if jd["type"] == "SOURCE" and not clickedNode.hasChildren():
+        for key in rds.info("KEYSPACE"):
+            db = int(key[2:])
+            print(db)
+            childNode = QtGui.QStandardItem(str(db))
+            childNode.setData(dict(type="SCHEMA", db=db), QtCore.Qt.UserRole)
+            clickedNode.appendRow(childNode)
+    if jd["type"] == "SCHEMA" and not clickedNode.hasChildren():
+        processNode(clickedNode, keysToTree(rds.keys()))
+        treeView.sortByColumn(0, QtCore.Qt.AscendingOrder)
+
+
+def keysToTree(keys):
+    tree = dict()
+    for key in map(bytes.decode, keys):
+        dkt = tree
+        for part in key.split(":"):
+            dkt[part] = dkt[part] if part in dkt else dict()
+            dkt = dkt[part]
+    return tree
+
+
+def processNode(node, dkt, path=""):
+    for k, v in dkt.items():
+        childPath = f"{path}:{k}".lstrip(":")
+        childNode = QtGui.QStandardItem(k)
+        childNode.setData(dict(type="KEY", path=childPath.encode()), QtCore.Qt.UserRole)
+        node.appendRow(childNode)
+        processNode(childNode, v, childPath)
+
+
 app.exec_()

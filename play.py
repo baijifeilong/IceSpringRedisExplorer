@@ -4,8 +4,10 @@ import json
 import mimesis
 import redis
 
-rds = redis.Redis()
-rds.flushdb()
+rds0 = redis.Redis()
+rds1 = redis.Redis(db=1)
+rds2 = redis.Redis(db=2)
+rds0.flushall()
 
 personMime = mimesis.Person(seed=0)
 foodMime = mimesis.Food(personMime.seed)
@@ -34,20 +36,11 @@ for index in range(10):
         disk=hardwareMime.ssd_or_hdd(),
         graphics=hardwareMime.graphics(),
     )
-    rds.set(f"PERSONS:{index + 1}", json.dumps(person))
-    rds.set(f"PERSONS:{index + 1}:ADDRESS", json.dumps(address))
-    rds.set(f"PERSONS:{index + 1}:COMPUTER", json.dumps(json.dumps(computer)))
+    rds0.set(f"PERSONS:{index + 1}", json.dumps(person))
+    rds0.set(f"PERSONS:{index + 1}:ADDRESS", json.dumps(address))
+    rds0.set(f"PERSONS:{index + 1}:COMPUTER", json.dumps(json.dumps(computer)))
 
 for index in range(10):
-    rds.set(f"FOODS:DISHES:{index + 1}", foodMime.dish())
-    rds.set(f"FOODS:FRUITS:{index + 1}", foodMime.fruit())
-    rds.set(f"FOODS:VEGETABLES:{index + 1}", foodMime.vegetable())
-
-tree = dict()
-for key in map(bytes.decode, rds.keys()):
-    dkt = tree
-    for part in key.split(":"):
-        dkt[part] = dkt[part] if part in dkt else dict()
-        dkt = dkt[part]
-print(tree)
-print(json.dumps(tree, indent=4))
+    rds0.set(f"FOODS:DISHES:{index + 1}", foodMime.dish())
+    rds1.set(f"FOODS:FRUITS:{index + 1}", foodMime.fruit())
+    rds2.set(f"FOODS:VEGETABLES:{index + 1}", foodMime.vegetable())
