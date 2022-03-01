@@ -1,11 +1,21 @@
 # Created by BaiJiFeiLong@gmail.com at 2021/12/20 10:56
 import json
 import logging
+import sys
+from sys import excepthook
 
 import colorlog
 import redis
 from PySide2 import QtWidgets, QtGui, QtCore
 
+
+def myExceptHook(*args):
+    logging.error("Exception occurred: %s", args[1])
+    excepthook(*args)
+    QtWidgets.QMessageBox.warning(QtWidgets.QApplication.activeWindow(), "Exception", str(args[1]))
+
+
+sys.excepthook = myExceptHook
 pattern = "%(log_color)s%(asctime)s %(levelname)8s %(name)-10s %(message)s"
 logging.getLogger().handlers = [logging.StreamHandler()]
 logging.getLogger().handlers[0].setFormatter(colorlog.ColoredFormatter(pattern))
